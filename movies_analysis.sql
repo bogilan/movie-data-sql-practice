@@ -160,6 +160,17 @@ FROM (
 	FROM movies_data_table
 	WHERE movie_genre LIKE '%Action%') AS action_actors_list;
 
+-- 8. Rank actors by the times they had leading role in a movie
+-- With GROUP BY
+SELECT first_star_actor, COUNT(*) as "star_roles_number"
+FROM movies_data_table
+GROUP BY first_star_actor
+ORDER BY star_roles_number DESC;
+-- With WINDOW FUNCTIONS
+SELECT DISTINCT first_star_actor, COUNT(*) OVER(PARTITION BY first_star_actor) AS roles_count
+FROM movies_data_table
+ORDER BY roles_count DESC;
 
 -- ======================================
 
+SELECT * FROM movies_data_table;
