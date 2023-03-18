@@ -74,8 +74,11 @@ GROUP BY year_released
 HAVING year_released REGEXP '^[0-9]*$' -- need REGEXP to include only numerical values due to mistake in master table data
 ORDER BY year_released DESC;
 
+-- 3. Which director has the most movies?
+SELECT movie_director, COUNT(*) as num_movies FROM movies_data_table
+GROUP BY movie_director ORDER BY num_movies DESC LIMIT 1;
 
--- 3. Show the cast of movie Avangers:Infinity War
+-- 4. Show the cast of movie Avangers:Infinity War
 -- Solution 1) By selecting required column
 SELECT first_star_actor, second_star_actor, third_star_actor, fourth_star_actor
 FROM movies_data_table
@@ -98,7 +101,7 @@ SELECT 'Star Actor #4' AS actor_role, fourth_star_actor AS actor_name
 FROM movies_data_table
 WHERE title = 'Avengers: Infinity War';
 
--- 4. List all the movies and publishing year that were directed by the same director who directed Interstellar movie
+-- 5. List all the movies and publishing year that were directed by the same director who directed Interstellar movie
 -- Solution 1) using Subquery
 SELECT title, year_released
 FROM movies_data_table
@@ -117,7 +120,11 @@ INNER JOIN (
 ) AS interstellar_director
 ON movies_data_table.movie_director = interstellar_director.movie_director;
 
--- 5. List all the movies and gross_income with income 10x greater than average movie gross income
+-- 6. What is the average gross income of movies released in the 21st century that have an IMDB rating of at least 7.0?
+SELECT AVG(gross_income) as avg_gross_income FROM movies_data_table
+WHERE year_released >= '2000' AND imdb_rating >= '7.0';
+
+-- 7. List all the movies and gross_income with income 10x greater than average movie gross income
 -- Solution 1) Using Subquery
 SELECT title, gross_income
 FROM movies_data_table
@@ -134,14 +141,14 @@ JOIN (SELECT AVG(gross_income) as avg_gross_income
 WHERE gross_income > 10 * avg_table.avg_gross_income
 ORDER BY gross_income DESC;
 
--- 6. What are TOP 5 rated Drama genre movies with more than 1.000.000 reviews?
+-- 8. What are TOP 5 rated Drama genre movies with more than 1.000.000 reviews?
 SELECT title, imdb_rating, votes_count
 FROM movies_data_table
 WHERE movie_genre LIKE '%Drama%' AND votes_count > 1000000
 ORDER BY imdb_rating DESC
 LIMIT 5;
 
--- 7. List all actors that played in action movies
+-- 9. List all actors that played in action movies
 SELECT DISTINCT actor_name
 FROM (
 	SELECT first_star_actor AS actor_name
@@ -160,7 +167,7 @@ FROM (
 	FROM movies_data_table
 	WHERE movie_genre LIKE '%Action%') AS action_actors_list;
 
--- 8. Rank actors by the times they had leading role in a movie
+-- 10. Rank actors by the times they had leading role in a movie
 -- With GROUP BY
 SELECT first_star_actor, COUNT(*) as "star_roles_number"
 FROM movies_data_table
@@ -171,6 +178,61 @@ SELECT DISTINCT first_star_actor, COUNT(*) OVER(PARTITION BY first_star_actor) A
 FROM movies_data_table
 ORDER BY roles_count DESC;
 
+-- 11. Which actor has starred in the most movies?
+SELECT actor, COUNT(*) as num_movies FROM (
+    SELECT first_star_actor AS actor FROM movies_data_table
+    UNION ALL
+    SELECT second_star_actor AS actor FROM movies_data_table
+    UNION ALL
+    SELECT third_star_actor AS actor FROM movies_data_table
+    UNION ALL
+    SELECT fourth_star_actor AS actor FROM movies_data_table
+) actors
+GROUP BY actor ORDER BY num_movies DESC LIMIT 1;
+
+-- 12. List TOP 5 actors with highest average IMDB rating for movies in which they have appeared in at least 3 roles?
+SELECT actor, AVG(CAST(imdb_rating AS FLOAT)) as avg_imdb_rating
+FROM (
+    SELECT first_star_actor AS actor, imdb_rating FROM movies_data_table
+    UNION ALL
+    SELECT second_star_actor AS actor, imdb_rating FROM movies_data_table
+    UNION ALL
+    SELECT third_star_actor AS actor, imdb_rating FROM movies_data_table
+    UNION ALL
+    SELECT fourth_star_actor AS actor, imdb_rating FROM movies_data_table
+) actors
+WHERE actor != '' AND actor IS NOT NULL
+GROUP BY actor HAVING COUNT(*) >= 3 ORDER BY avg_imdb_rating DESC LIMIT 5;
+
+-- 13. List TOP 10 actors by the number of movies in which they have appeared, along with the total gross income and average IMDB rating for those movies.
+SELECT actor, COUNT(*) AS movie_count, SUM(gross_income) AS total_movie_income, AVG(imdb_rating) AS avg_imdb_rating
+FROM (
+    SELECT first_star_actor AS actor, gross_income, imdb_rating FROM movies_data_table
+    UNION ALL
+    SELECT second_star_actor AS actor, gross_income, imdb_rating FROM movies_data_table
+    UNION ALL
+    SELECT third_star_actor AS actor, gross_income, imdb_rating FROM movies_data_table
+    UNION ALL
+    SELECT fourth_star_actor AS actor, gross_income, imdb_rating FROM movies_data_table
+) actors
+GROUP BY actor ORDER BY movie_count DESC LIMIT 10;
+
+-- 14. Find the actors with most roles appeared in movies with a total gross income of at least half a billion $, along with the number of such movies and the average IMDB rating for those movies.
+SELECT actor, COUNT(DISTINCT title) AS movie_count, AVG(imdb_rating) AS avg_imdb_rating
+FROM (
+    SELECT first_star_actor AS actor, title, gross_income, imdb_rating FROM movies_data_table WHERE gross_income >= 500000000
+    UNION ALL
+    SELECT second_star_actor AS actor, title, gross_income, imdb_rating FROM movies_data_table WHERE gross_income >= 500000000
+    UNION ALL
+    SELECT third_star_actor AS actor, title, gross_income, imdb_rating FROM movies_data_table WHERE gross_income >= 500000000
+    UNION ALL
+    SELECT fourth_star_actor AS actor, title, gross_income, imdb_rating FROM movies_data_table WHERE gross_income >= 500000000
+) AS high_income_movies
+GROUP BY actor
+HAVING movie_count > 0
+ORDER BY movie_count DESC,  avg_imdb_rating DESC;
+
+
 -- ======================================
 
-SELECT * FROM movies_data_table;
+SELECT * FROM movies_data_table WHERE gross_income >= 500000000;
